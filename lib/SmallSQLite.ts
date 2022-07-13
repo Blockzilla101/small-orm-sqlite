@@ -1,4 +1,4 @@
-import { DB } from "https://deno.land/x/sqlite@v2.5.0/mod.ts";
+import { DB } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
 
 /**
  * All your model classes should extend this class
@@ -76,9 +76,9 @@ export class SSQL {
             // retrieve a list of all columns known in the sqlite db
             const data: string[] = [];
             for (
-                const [loc, col] of this.db.query("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");")
+                const [_loc, col] of this.db.query("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");")
             ) {
-                data.push(col);
+                data.push(col as string);
             }
             // check if there are new properties in the model compared to the table in sqlite
             const n = names.filter((item) => !data.includes(item));
@@ -167,9 +167,11 @@ export class SSQL {
         );
         if (!countOnly) {
             const list: T[] = [];
-            let names: string[] = [];
-            try { names = rows.columns().map((item) => item.name); } catch (e) {
-                return { count: 0, objects: list };
+            const names: string[] = [];
+            for (
+                const [_loc, col] of this.db.query("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");")
+            ) {
+                names.push(col as string);
             }
             for (const row of rows) {
                 const nobj = new table();
@@ -180,7 +182,7 @@ export class SSQL {
             }
             return { count: list.length, objects: list };
         } else {
-            return { count: <number>rows.next().value[0], objects: [] };
+            return { count: rows[0][0] as number, objects: [] };
         }
     }
 
