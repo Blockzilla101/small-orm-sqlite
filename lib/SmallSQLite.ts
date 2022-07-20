@@ -91,13 +91,12 @@ export class SSQL {
         if (column === "id") {
             return "integer PRIMARY KEY AUTOINCREMENT NOT NULL";
         } else if (typeof v?.value === "boolean") {
-            return "boolean NOT NULL DEFAULT " + this.defaults.bool;
-        } else if (typeof v?.value === "string") {
-            return 'varchar DEFAULT "' + this.defaults.str + '"';
+            return "boolean NOT NULL DEFAULT " + this.defaults.bool;            
         } else if (typeof v?.value === "number") {
             return "integer NOT NULL DEFAULT " + this.defaults.int;
+        } else {
+            return 'varchar DEFAULT "' + this.defaults.str + '"';
         }
-        return undefined;
     }
 
     private alterTable<T extends SSQLTable>(table: T, columns: string[]) {
