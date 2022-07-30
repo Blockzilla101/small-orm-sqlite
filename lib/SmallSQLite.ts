@@ -91,11 +91,11 @@ export class SSQL {
         if (column === "id") {
             return "integer PRIMARY KEY AUTOINCREMENT NOT NULL";
         } else if (typeof v?.value === "boolean") {
-            return "boolean NOT NULL DEFAULT " + this.defaults.bool;            
+            return "boolean DEFAULT " + this.defaults.bool;            
         } else if (typeof v?.value === "number") {
-            return "integer NOT NULL DEFAULT " + this.defaults.int;
+            return "integer DEFAULT " + this.defaults.int;
         } else {
-            return 'varchar DEFAULT "' + this.defaults.str + '"';
+            return 'text DEFAULT "' + this.defaults.str + '"';
         }
     }
 
