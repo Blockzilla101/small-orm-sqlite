@@ -1,4 +1,4 @@
-import { Database as DB } from "https://deno.land/x/sqlite3@0.4.3/mod.ts";
+import { Database as DB } from "https://deno.land/x/sqlite3@0.4.4/mod.ts";
 
 /**
  * All your model classes should extend this class
