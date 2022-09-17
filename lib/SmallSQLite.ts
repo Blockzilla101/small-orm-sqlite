@@ -1,4 +1,4 @@
-import { Database as DB } from "https://deno.land/x/sqlite3@0.4.4/mod.ts";
+import { Database } from "https://deno.land/x/sqlite3@0.5.3/mod.ts";
 
 /**
  * All your model classes should extend this class
@@ -50,7 +50,7 @@ export interface SSQLQuery {
  * @class SSQL
  */
 export class SSQL {
-    public db: DB;
+    public db: Database;
     private defaults: SSQLDefaults;
 
     /**
@@ -63,7 +63,7 @@ export class SSQL {
      * @param defaults optional configuration to override DEFAULT vaules of columns by type
      */
     constructor(dbName: string, entities: (new () => SSQLTable)[], defaults?: SSQLDefaults) {
-        this.db = new DB(dbName);
+        this.db = new Database(dbName);
         defaults ? this.defaults = defaults : this.defaults = {
             bool: false,
             int: -1,
@@ -76,9 +76,9 @@ export class SSQL {
             // retrieve a list of all columns known in the sqlite db
             const data: string[] = [];
             for (
-                const [_loc, col] of this.db.queryArray("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");")
+                const [_loc, col] of this.db.prepare("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");").values<[string, string]>()
             ) {
-                data.push(col as string);
+                data.push(col);
             }
             // check if there are new properties in the model compared to the table in sqlite
             const n = names.filter((item) => !data.includes(item));
@@ -104,7 +104,7 @@ export class SSQL {
             const statement = 'ALTER TABLE "' + table.constructor.name.toLowerCase() +
                 '\" ADD COLUMN ' + column + " " +
                 this.columnInfo<SSQLTable>(table, column);
-            this.db.execute(statement);
+            this.db.prepare(statement).run();
         }
     }
 
@@ -116,7 +116,7 @@ export class SSQL {
             statement += '"' + p + '" ' + this.columnInfo<SSQLTable>(table, p);
         }
         statement += ")";
-        this.db.execute(statement);
+        this.db.prepare(statement).run();
     }
 
     private insertRecord<T extends SSQLTable>(table: T) {
@@ -131,7 +131,7 @@ export class SSQL {
             const v = Object.getOwnPropertyDescriptor(table, p);
             data.push(v?.value);
         }
-        this.db.execute(statement, ...data);
+        this.db.prepare(statement).run(...data);
         table.id = this.db.lastInsertRowId;
     }
 
@@ -148,7 +148,7 @@ export class SSQL {
         }
         statement += " WHERE id = ?";
         data.push(table.id);
-        this.db.execute(statement, ...data);
+        this.db.prepare(statement).run(...data);
     }
 
     private find<T extends SSQLTable>(
@@ -156,19 +156,18 @@ export class SSQL {
         let select = "*";
         if (countOnly) select = "COUNT(*) AS total";
         const obj = new table();
-        const rows = this.db.queryArray(
+        const rows = this.db.prepare(
             "SELECT " + select + ' FROM "' + obj.constructor.name + '"' +
             (query.where ? (" WHERE " + query.where.clause) : "") +
             (query.order ? (" ORDER BY " + query.order.by + (query.order.desc ? " DESC " : " ASC ")) : "") +
             (query.limit ? " LIMIT " + query.limit : "") +
-            (query.offset ? " OFFSET " + query.offset : ""),
-            ...(query.where ? query.where.values : [])
-        );
+            (query.offset ? " OFFSET " + query.offset : "")
+        ).values(...(query.where ? query.where.values : []));
         if (!countOnly) {
             const list: T[] = [];
             const names: string[] = [];
             for (
-                const [_loc, col] of this.db.queryArray("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");")
+                const [_loc, col] of this.db.prepare("PRAGMA table_info(" + obj.constructor.name.toLowerCase() + ");").values<[string, string]>()
             ) {
                 names.push(col as string);
             }
@@ -190,7 +189,7 @@ export class SSQL {
      * @param obj model based on `SSQLTable`
      */
     public delete<T extends SSQLTable>(obj: T) {
-        this.db.execute('DELETE FROM "' + obj.constructor.name + '" WHERE id = ?', obj.id);
+        this.db.prepare('DELETE FROM "' + obj.constructor.name + '" WHERE id = ?').run(obj.id);
     }
 
     /**
